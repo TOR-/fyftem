@@ -29,7 +29,7 @@ section .text
 ; rdi - pointer to null-terminated string
 ; ret - rax length of string
 string_length:	
-    xor rax, rax
+  xor rax, rax
 .loop:
 	cmp byte [rdi+rax], NULL	; ø terminator
 	je .exit
@@ -46,7 +46,7 @@ print_string:
 	mov rdi, STD_OUT
 	mov rax, SYS_WRITE
 	syscall
-    ret
+	ret
 
 ; rdi - character code
 print_char:
@@ -57,9 +57,9 @@ print_char:
     ret
 
 print_newline:
-    mov rdi, LF
+  mov rdi, LF
 	call print_char
-    ret
+  ret
 
 ASCII_TRANSFORM	EQU 0x30
 UINT_MAX_D		EQU	21
@@ -94,29 +94,29 @@ print_uint:
 	ret
 
 print_int:
-    test rdi, rdi
-    jns print_uint
-    push rdi
-    mov rdi, '-'
-    call print_char
-    pop rdi
-    neg rdi
-    jmp print_uint
-    ret
+  test rdi, rdi
+  jns print_uint
+  push rdi
+  mov rdi, '-'
+  call print_char
+  pop rdi
+  neg rdi
+  jmp print_uint
+  ret
 
 string_equals:
-    mov al, byte [rdi]
-    cmp al, byte [rsi]
-    jne .no
-    inc rdi
-    inc rsi
-    test al, al
-    jnz string_equals
-    mov rax, 1
-    ret
-    .no:
-    xor rax, rax
-    ret 
+  mov al, byte [rdi]
+  cmp al, byte [rsi]
+  jne .no
+  inc rdi
+  inc rsi
+  test al, al
+  jnz string_equals
+  mov rax, 1
+  ret
+.no:
+  xor rax, rax
+  ret 
 
 
 read_char:
@@ -127,102 +127,113 @@ read_char:
 	mov rax, SYS_READ
 	syscall
 	pop rax
-    ret
+  ret
 
 ; Just here to satisfy test.py
 read_word:
-    push r14
-    push r15
-    xor r14, r14 
-    mov r15, rsi
-    dec r15
+  push r14
+  push r15
+  xor r14, r14 
+  mov r15, rsi
+  dec r15
 
 .A:
-    push rdi
-    call read_char
-    pop rdi
-    cmp al, ' '
-    je .A
-    cmp al, 10
-    je .A
-    cmp al, 13
-    je .A 
-    cmp al, 9 
-    je .A
-    test al, al
-    jz .C
+  push rdi
+  call read_char
+  pop rdi
+  cmp al, ' '
+  je .A
+  cmp al, 10
+  je .A
+  cmp al, 13
+  je .A 
+  cmp al, 9 
+  je .A
+  test al, al
+  jz .C
 
 .B:
-    mov byte [rdi + r14], al
-    inc r14
+  mov byte [rdi + r14], al
+  inc r14
 
-    push rdi
-    call read_char
-    pop rdi
-    cmp al, ' '
-    je .C
-    cmp al, 10
-    je .C
-    cmp al, 13
-    je .C 
-    cmp al, 9
-    je .C
-    test al, al
-    jz .C
-    cmp r14, r15
-    je .D
+  push rdi
+  call read_char
+  pop rdi
+  cmp al, ' '
+  je .C
+  cmp al, 10
+  je .C
+  cmp al, 13
+  je .C 
+  cmp al, 9
+  je .C
+  test al, al
+  jz .C
+  cmp r14, r15
+  je .D
 
-    jmp .B
+  jmp .B
 
 .C:
-    mov byte [rdi + r14], 0
-    mov rax, rdi 
-   
-    mov rdx, r14 
-    pop r15
-    pop r14
-    ret
+  mov byte [rdi + r14], 0
+  mov rax, rdi 
+ 
+  mov rdx, r14 
+  pop r15
+  pop r14
+  ret
 
 .D:
-    xor rax, rax
-    pop r15
-    pop r14
-    ret
+  xor rax, rax
+  pop r15
+  pop r14
+  ret
 
-; This works, but not with test.py
 ; rdi - buffer address
 ; rsi - buffer length
-;read_word:
-;	xor r8, r8
-;.loop:
-;	cmp r8, rsi
-;	je .toolong
-;
-;	push r8
-;	push rdi
-;	push rsi
-;	call read_char
-;	pop rsi
-;	pop rdi
-;	pop r8
-;
-;	cmp al, SPC
-;	je .ws
-;	cmp al, TAB
-;	je .ws
-;	cmp al, LF
-;	je .ws
-;	mov [rdi + r8], al
-;	inc r8
-;	jmp .loop
-;
-;.ws:
-;	mov byte [rdi+r8], 0
-;	mov rax, rdi
-;	ret
-;.toolong:
-;	mov rax, 0
-;	ret
+; rdx - word delimiter
+read_word_delim:
+	push r15
+	push r14
+	push r13
+	mov r15, rsi
+	dec r15
+	xor r14, r14
+	mov r13, rdx
+.skip:	; skip leading delimiters
+	push rdi
+	call read_char
+	pop rdi
+
+	cmp al, r13b
+	je .skip
+.loop:
+	cmp r14, r15
+	je .toolong
+
+	mov byte [rdi + r14], al
+	inc r14
+
+	push rdi
+	call read_char
+	pop rdi
+	cmp al, r13b
+	je .delim
+	jmp .loop
+
+.delim:
+	mov byte [rdi+r14], 0
+	mov rax, r14
+	pop r13
+	pop r14
+	pop r15
+	ret
+.toolong:
+	xor rax, rax
+	pop r13
+	pop r14
+	pop r15
+	ret
 
 ; rdi points to a string
 ; returns rax: number, rdx : length

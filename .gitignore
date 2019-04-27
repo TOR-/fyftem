@@ -1,0 +1,6 @@
+# binaries
+*.o
+fyf
+
+.gdb_history
+Session.vim

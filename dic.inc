@@ -33,14 +33,36 @@ native "exit", exit
 	add rstack, 8
 	jmp next
 
-; ( buf* -- )
-; read word from stdin, store in buf
+; ( char "<char>*ccc<char>" -- c-addr )
+; skip leading <char>s
+; read ccc into buffer
+; c-addr = buffer*
 native "word", word
-	pop rdi
-	call read_word
-	push rdx		; WHAT'S GOING ON HERE?
+	pop rdx
+	mov rdi, input_buf
+	mov rsi, input_buf_size
+	push rdi
+	call read_word_delim
 	jmp next
 
+; (c-addr1 -- c-addr1 len)
+; convert from null-terminated string format to counted string
+native "count", count
+	pop rdi
+	push rdi
+	call string_length
+	push rax
+	jmp next
+
+; (c-addr u --)
+native "type", type
+	mov rax, SYS_WRITE
+	mov rdi, STD_OUT
+	pop rdx
+	pop rsi
+	syscall
+	jmp next
+	
 ; ( str* -- ) 
 ; prints str
 native "prints", prints
@@ -100,17 +122,10 @@ native ".", dot
 	call print_uint
 	jmp next
 
-; colon word :. stores execution tokens
-colon "main", main
-	dq xt_inbuf
-	dq xt_word
-; dq xt_drop
-	dq xt_inbuf
-	dq xt_find_word
-	dq xt_cfa
-	dq xt_dot
-	dq xt_inbuf
-	dq xt_prints
-	dq xt_bye
+native "bl", bl
+	push SPC
+	jmp next
+
+; colon word : stores execution tokens
 
 %endif

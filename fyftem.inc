@@ -38,4 +38,9 @@ word %1, %2, 0
 %define w       r14 ; when non-native word starts execution, points to first word
 %define rstack  r13 ; Return stack pointer
 
+; ====================
+; = System constants =
+; ====================
+%define input_buf_size 1024
+
 %endif
