@@ -51,10 +51,13 @@ print_string:
 ; rdi - character code
 print_char:
 	push rdi
-	mov rdi, rsp
-	call print_string
+  mov rdx, 1
+  mov rsi, rsp
+  mov rdi, STD_OUT
+  mov rax, SYS_WRITE
+  syscall
 	pop rdi
-    ret
+  ret
 
 print_newline:
   mov rdi, LF
@@ -66,12 +69,14 @@ UINT_MAX_D		EQU	21
 ; rdi - uint
 print_uint:
 	push rbp
-	push rsp
+  push r9
+	mov r9, rsp
 	mov rax, rdi
 	mov rbp, rsp
+  mov rbx, rsp
 	sub rsp, UINT_MAX_D
-	mov byte [rbp], 0
-	dec rbp
+	mov byte [rbx], 0
+	dec rbx
 	
 	mov r8, 10
 .loop:
@@ -79,17 +84,23 @@ print_uint:
 	;rax contains lower 64b
 	div r8		; rax / r8 . rdx = lowest digit, rax = rax/10
 	or dl, ASCII_TRANSFORM
-	dec rbp
-	mov [rbp], dl
-	test rax, rax	; finished?
+	dec rbx
+	mov [rbx], dl
+  
+;  mov rdi, rdx
+;  push rax
+;  call print_char
+;  pop rax
+  test rax, rax	; finished?
 	jnz .loop
 
-	mov rdi, rbp
+	mov rdi, rbx
 	call print_string
 
 ;	add rsp, 24
 
-	pop rsp
+	mov rsp, r9
+  pop r9
 	pop rbp
 	ret
 
