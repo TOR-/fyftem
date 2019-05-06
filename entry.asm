@@ -10,10 +10,10 @@ input_buf: resb input_buf_size
 section .text
 
 colon "main", main
-	dq xt_bl
-  dq xt_word
-	dq xt_count
-	dq xt_type
+	dq xt_number
+	dq xt_number
+	dq xt_div
+	dq xt_dotS
 	dq xt_bye
 
 ; one cell program

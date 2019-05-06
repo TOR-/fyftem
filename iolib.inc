@@ -73,8 +73,6 @@ print_uint:
 	mov rdi, rbx
 	call print_string
 
-;	add rsp, 24
-
 	mov rsp, r9
   pop r9
 	pop rbp
@@ -116,69 +114,20 @@ read_char:
 	pop rax
   ret
 
-; Just here to satisfy test.py
-read_word:
-  push r14
-  push r15
-  xor r14, r14 
-  mov r15, rsi
-  dec r15
-
-.A:
-  push rdi
-  call read_char
-  pop rdi
-  cmp al, ' '
-  je .A
-  cmp al, 10
-  je .A
-  cmp al, 13
-  je .A 
-  cmp al, 9 
-  je .A
-  test al, al
-  jz .C
-
-.B:
-  mov byte [rdi + r14], al
-  inc r14
-
-  push rdi
-  call read_char
-  pop rdi
-  cmp al, ' '
-  je .C
-  cmp al, 10
-  je .C
-  cmp al, 13
-  je .C 
-  cmp al, 9
-  je .C
-  test al, al
-  jz .C
-  cmp r14, r15
-  je .D
-
-  jmp .B
-
-.C:
-  mov byte [rdi + r14], 0
-  mov rax, rdi 
- 
-  mov rdx, r14 
-  pop r15
-  pop r14
-  ret
-
-.D:
-  xor rax, rax
-  pop r15
-  pop r14
-  ret
-
+; read space delimited word into rdi
 ; rdi - buffer address
 ; rsi - buffer length
-; rdx - word delimiter
+read_word:
+	mov rdx, SPC
+	call read_word_delim
+	ret
+; Args:
+;   rdi - buffer address
+;   rsi - buffer length
+;   rdx - word delimiter
+; return:
+;   rdi - buf
+;   rax - word length
 read_word_delim:
 	push r15
 	push r14
@@ -258,33 +207,42 @@ read_word_delim:
 
 ; returns rax: number, rdx : length
 parse_uint:
-    mov r8, 10
-    xor rax, rax
-    xor rcx, rcx
+  mov r8, 10
+  xor rax, rax
+  xor rcx, rcx
 .loop:
-    movzx r9, byte [rdi + rcx] 
-    cmp r9b, '0'
-    jb .end
-    cmp r9b, '9'
-    ja .end
-    xor rdx, rdx 
-    mul r8
-    and r9b, 0x0f
-    add rax, r9
-    inc rcx 
-    jmp .loop 
-    .end:
-    mov rdx, rcx
-    ret
+  movzx r9, byte [rdi + rcx] 
+  cmp r9b, '0'
+  jb .end
+  cmp r9b, '9'
+  ja .end
+  xor rdx, rdx 
+  mul r8
+  and r9b, 0x0f
+  add rax, r9
+  inc rcx 
+  jmp .loop 
+  .end:
+  mov rdx, rcx
+  ret
 
 ; rdi points to a string
 ; returns rax: number, rdx : length
 parse_int:
-    xor rax, rax
-    ret 
+	movzx r8, byte [rdi]
+	cmp r8b, '-'
+	jne .positive
+	inc rdi
+	call parse_uint
+	neg rax
+	jmp .end
+.positive:
+	call parse_uint
+.end:
+  ret 
 
-; rdi - pointer to null-terminated string	arg1
-; rsi - pointer to target buffer			arg2
+; rdi - pointer to null-terminated string arg1
+; rsi - pointer to target buffer          arg2
 ; rdx - buffer length
 ; ret - rax - rdi if fits
 ;			- 0 if too big

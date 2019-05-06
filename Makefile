@@ -8,4 +8,4 @@ all: $(OBJ)
 	nasm -g -felf64 $^ -o $@
 
 clean:
-	rm -r $(OBJ) $(BIN)
+	rm -rf $(OBJ) $(BIN)

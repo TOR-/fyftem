@@ -103,6 +103,30 @@ native "cfa", cfa
 	push qword rax
 	jmp next
 
+; ( name* -- addr/0 )
+native "find_word", find_word
+	pop rdi
+	mov rsi, DICT_TOP
+.search:
+	lea rsi, [rsi + 8]
+	push rdi
+	push rsi
+	call string_equals
+	pop rsi
+	pop rdi
+	cmp rax, 1
+	je .done
+	mov rsi, [rsi]
+	cmp rsi, 0
+	je .fail
+	jmp .search
+.fail:
+	push qword 0
+	jmp next
+.done:
+	push qword rsi
+	jmp next
+
 native ".S", dotS
 	mov rax, rsp
 .loop:
@@ -110,7 +134,7 @@ native ".S", dotS
 	jae .done
 	mov rdi, [rax]	; print next stack value
 	push rax
-	call print_uint
+	call print_int
 	mov rdi, SPC
 	call print_char
 	pop rax
@@ -128,6 +152,52 @@ native "bl", bl
 	push SPC
 	jmp next
 
-; colon word : stores execution tokens
+native "+", add
+	pop rax
+	pop rcx
+	add rax, rcx
+	push rax
+	jmp next
+
+;( n1 n2 -- n1-n2)
+native "-", sub
+	pop rcx
+	pop rax
+	sub rax, rcx	; sub rcx from rax
+	push rax
+	jmp next
+
+;( n1 n2 -- n1*n2)
+native "*", mul
+	pop rcx
+	pop rax
+	xor rdx, rdx
+	imul rcx
+	push rax
+	jmp next
+
+;( n1 n2 -- n1/n2)
+native "/", div
+	pop rcx
+	pop rax
+	xor rdx, rdx
+	cmp rax, 0
+	jge .div
+	mov rdx, -1
+.div:
+	; rdx:rax/rcx = rax,rdx
+	; up64:low64/div = quot,rem
+	idiv rcx
+	push rax
+	jmp next
+
+; ( " n " -- n)
+native "number", number
+	mov rdi, input_buf
+	mov rsi, input_buf_size
+	call read_word
+	call parse_int
+	push rax
+	jmp next
 
 %endif
