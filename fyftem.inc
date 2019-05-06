@@ -17,21 +17,22 @@ xt_%2:      ; execution token beginning
 
 %macro native 3
 word %1, %2, %3
-	dq i_%2		; native words' execution tokens are pointers to their implementations
+  dq i_%2    ; native words' execution tokens are pointers to their implementations
 i_%2:
 %endmacro
 %macro native 2
 word %1, %2, 0
-	dq i_%2
+  dq i_%2
 i_%2:
 %endmacro
 
 %macro colon 2
 word %1, %2, 0
-	dq i_docol
+  dq i_docol
 %endmacro
 
 %define CELL_SIZE 8
+
 ; =============
 ; = Registers =
 ; =============

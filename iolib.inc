@@ -4,79 +4,79 @@
 
 section .text
 
-string_length:	
+string_length:
   xor rax, rax
 .loop:
-	cmp byte [rdi+rax], NULL	; ø terminator
-	je .exit
-	inc rax
-	jmp .loop
+  cmp byte [rdi+rax], NULL  ; ø terminator
+  je .exit
+  inc rax
+  jmp .loop
 .exit:
     ret
 
 ; rdi - pointer to null-terminated string
 print_string:
-	call string_length
-	mov rdx, rax
-	mov rsi, rdi
-	mov rdi, STD_OUT
-	mov rax, SYS_WRITE
-	syscall
-	ret
+  call string_length
+  mov rdx, rax
+  mov rsi, rdi
+  mov rdi, STD_OUT
+  mov rax, SYS_WRITE
+  syscall
+  ret
 
 ; rdi - character code
 print_char:
-	push rdi
+  push rdi
   mov rdx, 1
   mov rsi, rsp
   mov rdi, STD_OUT
   mov rax, SYS_WRITE
   syscall
-	pop rdi
+  pop rdi
   ret
 
 print_newline:
   mov rdi, LF
-	call print_char
+  call print_char
   ret
 
-ASCII_TRANSFORM	EQU 0x30
-UINT_MAX_D		EQU	21
+ASCII_TRANSFORM  EQU 0x30
+UINT_MAX_D    EQU  21
 ; rdi - uint
 print_uint:
-	push rbp
+  push rbp
   push r9
-	mov r9, rsp
-	mov rax, rdi
-	mov rbp, rsp
+  mov r9, rsp
+  mov rax, rdi
+  mov rbp, rsp
   mov rbx, rsp
-	sub rsp, UINT_MAX_D
-	mov byte [rbx], 0
-	dec rbx
-	
-	mov r8, 10
+  sub rsp, UINT_MAX_D
+  mov byte [rbx], 0
+  dec rbx
+  
+  mov r8, 10
 .loop:
-	xor rdx, rdx	; upper 64b
-	;rax contains lower 64b
-	div r8		; rax / r8 . rdx = lowest digit, rax = rax/10
-	or dl, ASCII_TRANSFORM
-	dec rbx
-	mov [rbx], dl
+  xor rdx, rdx  ; upper 64b
+  ;rax contains lower 64b
+  div r8    ; rax / r8 . rdx = lowest digit, rax = rax/10
+  or dl, ASCII_TRANSFORM
+  dec rbx
+  mov [rbx], dl
   
 ;  mov rdi, rdx
 ;  push rax
 ;  call print_char
 ;  pop rax
-  test rax, rax	; finished?
-	jnz .loop
+  test rax, rax  ; finished?
+  jnz .loop
 
-	mov rdi, rbx
-	call print_string
+  mov rdi, rbx
+  call print_string
 
-	mov rsp, r9
+  mov rsp, r9
   pop r9
-	pop rbp
-	ret
+  pop rbp
+  ret
 
 print_int:
   test rdi, rdi
@@ -105,22 +105,22 @@ string_equals:
 
 ; rax - character read
 read_char:
-	mov rdx, 1
-	push 0
-	mov rsi, rsp
-	mov rdi, STD_IN
-	mov rax, SYS_READ
-	syscall
-	pop rax
+  mov rdx, 1
+  push 0
+  mov rsi, rsp
+  mov rdi, STD_IN
+  mov rax, SYS_READ
+  syscall
+  pop rax
   ret
 
 ; read space delimited word into rdi
 ; rdi - buffer address
 ; rsi - buffer length
 read_word:
-	mov rdx, SPC
-	call read_word_delim
-	ret
+  mov rdx, SPC
+  call read_word_delim
+  ret
 ; Args:
 ;   rdi - buffer address
 ;   rsi - buffer length
@@ -129,80 +129,80 @@ read_word:
 ;   rdi - buf
 ;   rax - word length
 read_word_delim:
-	push r15
-	push r14
-	push r13
-	mov r15, rsi
-	dec r15
-	xor r14, r14
-	mov r13, rdx
-.skip:	; skip leading delimiters
-	push rdi
-	call read_char
-	pop rdi
+  push r15
+  push r14
+  push r13
+  mov r15, rsi
+  dec r15
+  xor r14, r14
+  mov r13, rdx
+.skip:  ; skip leading delimiters
+  push rdi
+  call read_char
+  pop rdi
 
-	cmp al, r13b
-	je .skip
+  cmp al, r13b
+  je .skip
 .loop:
-	cmp r14, r15
-	je .toolong
+  cmp r14, r15
+  je .toolong
 
-	mov byte [rdi + r14], al
-	inc r14
+  mov byte [rdi + r14], al
+  inc r14
 
-	push rdi
-	call read_char
-	pop rdi
-	cmp al, r13b
-	je .delim
-	jmp .loop
+  push rdi
+  call read_char
+  pop rdi
+  cmp al, r13b
+  je .delim
+  jmp .loop
 
 .delim:
-	mov byte [rdi+r14], 0
-	mov rax, r14
-	pop r13
-	pop r14
-	pop r15
-	ret
+  mov byte [rdi+r14], 0
+  mov rax, r14
+  pop r13
+  pop r14
+  pop r15
+  ret
 .toolong:
-	xor rax, rax
-	pop r13
-	pop r14
-	pop r15
-	ret
+  xor rax, rax
+  pop r13
+  pop r14
+  pop r15
+  ret
 
 ; rdi points to a string
 ; returns rax: number, rdx : length
 ; pushes each number as it's converted
 ; pops and adds to acc at end
 ;parse_uint:
-;	xor rax, rax
-;	xor rdx, rdx
-;	mov r10, 10
+;  xor rax, rax
+;  xor rdx, rdx
+;  mov r10, 10
 ;.loop:
-;	xor rax, rax
-;	movzx ax, byte [rdi + rdx]
-;	cmp al, '0'
-;	jb .exit
-;	cmp al, '9'
-;	ja .exit
-	
-;	push rax
-;	push rdx
-;	mov rax, r9
-;	mul r10
-;	mov r9, rax
-;	pop rdx
-;	pop rax
-	
-;	sub al, ASCII_OFFS
-;	rax -- digit
-;	add r9, rax
-;	inc rdx
-;	jmp .loop
+;  xor rax, rax
+;  movzx ax, byte [rdi + rdx]
+;  cmp al, '0'
+;  jb .exit
+;  cmp al, '9'
+;  ja .exit
+  
+;  push rax
+;  push rdx
+;  mov rax, r9
+;  mul r10
+;  mov r9, rax
+;  pop rdx
+;  pop rax
+  
+;  sub al, ASCII_OFFS
+;  rax -- digit
+;  add r9, rax
+;  inc rdx
+;  jmp .loop
 
 ;.exit:
-;	mov rax, r9
+;  mov rax, r9
 ;    ret
 
 ; returns rax: number, rdx : length
@@ -229,15 +229,15 @@ parse_uint:
 ; rdi points to a string
 ; returns rax: number, rdx : length
 parse_int:
-	movzx r8, byte [rdi]
-	cmp r8b, '-'
-	jne .positive
-	inc rdi
-	call parse_uint
-	neg rax
-	jmp .end
+  movzx r8, byte [rdi]
+  cmp r8b, '-'
+  jne .positive
+  inc rdi
+  call parse_uint
+  neg rax
+  jmp .end
 .positive:
-	call parse_uint
+  call parse_uint
 .end:
   ret 
 
@@ -245,25 +245,25 @@ parse_int:
 ; rsi - pointer to target buffer          arg2
 ; rdx - buffer length
 ; ret - rax - rdi if fits
-;			- 0 if too big
+;      - 0 if too big
 string_copy:
-	call string_length
-	inc rax				; null byte
-	cmp rax, rdx
-	jg .toobig
-	xor r8, r8
+  call string_length
+  inc rax        ; null byte
+  cmp rax, rdx
+  jg .toobig
+  xor r8, r8
 .move:
-	cmp qword r8, rax
-	jge .justright
-	mov r9, [rdi+r8]
-	mov [rsi+r8], r9
-	inc r8
-	jmp .move
+  cmp qword r8, rax
+  jge .justright
+  mov r9, [rdi+r8]
+  mov [rsi+r8], r9
+  inc r8
+  jmp .move
 .toobig:
-	mov qword rax, 0
-	ret
+  mov qword rax, 0
+  ret
 .justright:
-	mov rax, rsi
-	ret
+  mov rax, rsi
+  ret
 
 %endif

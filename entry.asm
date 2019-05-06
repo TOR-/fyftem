@@ -7,14 +7,16 @@ resq 1023
 rstack_start: resq 1
 input_buf: resb input_buf_size
 
+pad: resb 1024
+
 section .text
 
 colon "main", main
-	dq xt_number
-	dq xt_number
-	dq xt_dotS
-	dq xt_dot
-	dq xt_bye
+  dq xt_bl
+  dq xt_word
+  dq xt_count
+  dq xt_type
+  dq xt_bye
 
 ; one cell program
 main_stub: dq xt_main
@@ -23,8 +25,8 @@ main_stub: dq xt_main
 ; INTERPRETER
 ; ============
 next:
-	mov w, [pc]
-	add pc, 8
-	jmp [w]
+  mov w, [pc]
+  add pc, CELL_SIZE
+  jmp [w]
 
 _start: jmp i_init
