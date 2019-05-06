@@ -12,8 +12,8 @@ section .text
 colon "main", main
 	dq xt_number
 	dq xt_number
-	dq xt_div
 	dq xt_dotS
+	dq xt_dot
 	dq xt_bye
 
 ; one cell program

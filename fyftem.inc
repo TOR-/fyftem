@@ -31,6 +31,7 @@ word %1, %2, 0
 	dq i_docol
 %endmacro
 
+%define CELL_SIZE 8
 ; =============
 ; = Registers =
 ; =============

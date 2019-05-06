@@ -103,7 +103,7 @@ string_equals:
   xor rax, rax
   ret 
 
-
+; rax - character read
 read_char:
 	mov rdx, 1
 	push 0

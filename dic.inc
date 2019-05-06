@@ -12,11 +12,6 @@ section .text
 ; dictionary
 ; ============
 first_word:
-; ( a -- )
-native "drop", drop
-	add rsp, 8
-	jmp next
-
 ; initialises registers
 native "init", init
 	mov rstack, rstack_start		; reset return stack
@@ -31,16 +26,16 @@ native "init", init
 
 ; saves pc at start of colon word
 native "docol", docol
-	sub rstack, 8
+	sub rstack, CELL_SIZE
 	mov [rstack], pc
-	add w, 8
+	add w, CELL_SIZE
 	mov pc, w
 	jmp next
 
 ; returns from colon word
 native "exit", exit
 	mov pc, [rstack]
-	add rstack, 8
+	add rstack, CELL_SIZE
 	jmp next
 
 ; ( char "<char>*ccc<char>" -- c-addr )
@@ -94,7 +89,7 @@ native "inbuf", inbuf
 ; ( name -- codeaddr )
 native "cfa", cfa
 	pop rdi
-	lea rdi, [rdi + 8]
+	lea rdi, [rdi + CELL_SIZE]
 	push rdi
 	call string_length
 	pop rdi
@@ -108,7 +103,7 @@ native "find_word", find_word
 	pop rdi
 	mov rsi, DICT_TOP
 .search:
-	lea rsi, [rsi + 8]
+	lea rsi, [rsi + CELL_SIZE]
 	push rdi
 	push rsi
 	call string_equals
@@ -138,14 +133,17 @@ native ".S", dotS
 	mov rdi, SPC
 	call print_char
 	pop rax
-	add rax, 8
+	add rax, CELL_SIZE
 	jmp .loop
 .done:
 	jmp next
 
+; ( n -- "n")
 native ".", dot
 	pop rdi
 	call print_uint
+	mov rdi, SPC
+	call print_char
 	jmp next
 
 native "bl", bl
@@ -191,6 +189,24 @@ native "/", div
 	push rax
 	jmp next
 
+native "=", equal
+	pop rcx
+	pop rdx
+	xor rax, rax
+	cmp rdx, rcx
+	sete al
+	push rax
+	jmp next
+
+native "<", less
+	pop rcx
+	pop rdx
+	xor rax, rax
+	cmp rdx, rcx
+	setl al
+	push rax
+	jmp next
+
 ; ( " n " -- n)
 native "number", number
 	mov rdi, input_buf
@@ -198,6 +214,65 @@ native "number", number
 	call read_word
 	call parse_int
 	push rax
+	jmp next
+
+; ( c -- "c")
+native "emit", emit
+	mov r8, rdi
+	pop rdi
+	push r8
+	call print_char
+	pop rdi
+	jmp next
+
+; ( "c" -- c)
+native "key", key
+	call read_char
+	push rax
+	jmp next
+
+native "and", and
+	pop rcx
+	pop rdx
+	xor rax, rax
+	test rcx, rdx
+	setnz al
+	push rax
+	jmp next
+
+native "not", not
+	pop rcx
+	xor rax, rax
+	cmp rcx, 0
+	setz al
+	push rax
+	jmp next
+
+; ( a b c -- b c a)
+native "rot", rot
+	pop rdx
+	pop rcx
+	pop rax
+	push rdx
+	push rax
+	push rcx
+	jmp next
+; ( a b -- b a)
+native "swap", swap
+	pop rdx
+	pop rcx
+	push rdx
+	push rcx
+	jmp next
+; ( a -- a a)
+native "dup", dup
+	pop rcx
+	push rcx
+	push rcx
+	jmp next
+; ( a -- )
+native "drop", drop
+	add rsp, CELL_SIZE
 	jmp next
 
 %endif
