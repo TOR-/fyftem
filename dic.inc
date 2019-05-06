@@ -3,6 +3,10 @@
 %include "fyftem.inc"
 %include "iolib.inc"
 
+section .data
+data_stack_base: ; store data stack start address
+	dq 0
+
 section .text
 ; ============
 ; dictionary
@@ -15,8 +19,14 @@ native "drop", drop
 
 ; initialises registers
 native "init", init
-	mov rstack, rstack_start
-	mov pc, main_stub
+	mov rstack, rstack_start		; reset return stack
+	mov pc, main_stub						; load entry point
+	cmp qword [data_stack_base], 0 ; initialised yet?
+	je .uninitialised
+	mov rsp, [data_stack_base]  ; reset data stack
+	jmp next
+.uninitialised:
+	mov [data_stack_base], rsp
 	jmp next
 
 ; saves pc at start of colon word
@@ -93,28 +103,20 @@ native "cfa", cfa
 	push qword rax
 	jmp next
 
-; ( name* -- addr/0 )
-native "find_word", find_word
-	pop rdi
-	mov rsi, DICT_TOP
-.search:
-	lea rsi, [rsi + 8]
-	push rdi
-	push rsi
-	call string_equals
-	pop rsi
-	pop rdi
-	cmp rax, 1
-	je .done
-	mov rsi, [rsi]
-	cmp rsi, 0
-	je .fail
-	jmp .search
-.fail:
-	push qword 0
-	jmp next
+native ".S", dotS
+	mov rax, rsp
+.loop:
+	cmp rax, [data_stack_base]
+	jae .done
+	mov rdi, [rax]	; print next stack value
+	push rax
+	call print_uint
+	mov rdi, SPC
+	call print_char
+	pop rax
+	add rax, 8
+	jmp .loop
 .done:
-	push qword rsi
 	jmp next
 
 native ".", dot
