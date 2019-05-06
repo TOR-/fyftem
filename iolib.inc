@@ -1,33 +1,9 @@
 %ifndef _FYFTEM_IOLIB_INC
 %define _FYFTEM_IOLIB_INC
 %include "stdmac.inc"
-;section .data
-;uint_str:		db "0", 0
 
 section .text
-;global _start
-;_start:
-;	mov rdi, uint_str
-;	push rdi
-;	call print_string
-;	pop rdi
-;	call parse_uint
-;	push rax
-;	push rdx
-;	call print_newline
-;	pop rdx
-;	pop rax
-;	mov rdi, rax		; uint value
-;	call print_uint
-;	mov rdi, rdx		; uint # of digits
-;	call print_uint
-	
-;	mov rdi, rdx
-;	mov rax, SYS_EXIT
-;	syscall
 
-; rdi - pointer to null-terminated string
-; ret - rax length of string
 string_length:	
   xor rax, rax
 .loop:
@@ -51,10 +27,13 @@ print_string:
 ; rdi - character code
 print_char:
 	push rdi
-	mov rdi, rsp
-	call print_string
+	mov rdx, 1
+	mov rsi, rsp
+	mov rdi, STD_OUT
+	mov rax, SYS_WRITE
+	syscall
 	pop rdi
-    ret
+	ret
 
 print_newline:
   mov rdi, LF
