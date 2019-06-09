@@ -12,7 +12,6 @@ pad: resq 1024
 section .data
 msg_undefined:
   db "undefined word", 0
-next_xt: dq 0
 state: dq INTERPRET
 
 section .text
@@ -34,10 +33,11 @@ colon "quit", quit
   dq xt_branch, .loop
   dq xt_bye
 
-; ( caddr len --)
+; ( caddr --)
 colon "interpret", interpret
   dq xt_dup, xt_find ; ( caddr addr/0 )
   dq xt_dup, xt_branch0, .number
+  dq xt_swap, xt_drop
   dq xt_cfa, xt_execute
   dq xt_exit
 .number:  ; ( caddr 0)
