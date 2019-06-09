@@ -1,5 +1,5 @@
 BIN=fyf
-OBJ=entry.o
+OBJ=fyftem.o iolib.o
 
 all: $(OBJ)
 	ld -o $(BIN) $(OBJ)

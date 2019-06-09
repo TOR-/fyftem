@@ -1,10 +1,14 @@
 %ifndef _FYFTEM_DICTIONARY_INC
 %define _FYFTEM_DICTIONARY_INC
-%include "fyftem.inc"
+
+%include "stdmac.inc"
+%include "macros.inc"
 %include "iolib.inc"
 
 section .data
 data_stack_base: ; store data stack start address
+  dq 0
+dict_top:
   dq 0
 
 section .text
@@ -14,14 +18,18 @@ section .text
 first_word:
 ; initialises registers
 native "init", init
-  mov rstack, rstack_start		; reset return stack
-  mov pc, main_stub            ; load entry point
-  cmp qword [data_stack_base], 0 ; initialised yet?
-  je .uninitialised
-  mov rsp, [data_stack_base]  ; reset data stack
-  jmp next
-.uninitialised:
+  mov rstack, rstack_start ; reset return stack
+  mov pc, main_stub        ; load entry point
+  cmp qword [dict_top], 0  ; dict_top defined?
+  jne .stack
+  mov qword [dict_top], STATIC_DICT_END
+.stack:
+  cmp qword [data_stack_base], 0  ; initialised yet?
+  jne .reset_stack
   mov [data_stack_base], rsp
+  jmp next
+.reset_stack:
+  mov rsp, [data_stack_base]      ; reset data stack
   jmp next
 
 ; saves pc at start of colon word
@@ -38,7 +46,7 @@ native "exit", exit
   add rstack, CELL_SIZE
   jmp next
 
-; ( char "<char>*ccc<char>" -- c-addr )
+; ( char "<char>*ccc<char>" -- c-addr len)
 ; skip leading <char>s
 ; read ccc into buffer
 ; c-addr = buffer*
@@ -46,8 +54,9 @@ native "word", word
   pop rdx
   mov rdi, input_buf
   mov rsi, input_buf_size
-  push rdi
   call read_word_delim
+  push rdi
+  push rax
   jmp next
 
 ; (c-addr1 -- c-addr1 len)
@@ -70,10 +79,10 @@ native "type", type
   
 ; ( str* -- ) 
 ; prints str
-native "prints", prints
-  pop rdi
-  call print_string
-  jmp next
+;native "prints", prints
+;  pop rdi
+;  call print_string
+;  jmp next
 
 ; exits program
 native "bye", bye
@@ -86,24 +95,39 @@ native "inbuf", inbuf
   push qword input_buf
   jmp next
 
-; ( name -- codeaddr )
+; ( name* -- codeaddr )
 native "cfa", cfa
+  mov rdx, rdi
   pop rdi
-  lea rdi, [rdi + CELL_SIZE]
-  push rdi
+;  lea rdi, [rdi + CELL_SIZE]
+  push rdx
   call string_length
-  pop rdi
+  pop rdx
   add rax, rdi
-  inc rax
+  inc rax ; skip null byte
+  inc rax ; skip flags
   push qword rax
+  mov rdi, rdx
+  jmp next
+
+; ( n -- "n")
+native ".", dot
+  pop rdi
+  call print_uint
+  mov rdi, SPC
+  call print_char
   jmp next
 
 ; ( name* -- addr/0 )
-native "find_word", find_word
+native "find", find
+  mov rdx, rdi
   pop rdi
-  mov rsi, DICT_TOP
+  push rdx
+  push rsi
+  mov rsi, [dict_top]
 .search:
-  lea rsi, [rsi + CELL_SIZE]
+  ;lea rsi, [rsi + CELL_SIZE]
+  add rsi, CELL_SIZE
   push rdi
   push rsi
   call string_equals
@@ -111,15 +135,20 @@ native "find_word", find_word
   pop rdi
   cmp rax, 1
   je .done
-  mov rsi, [rsi]
+  mov rsi, [rsi - CELL_SIZE]
   cmp rsi, 0
   je .fail
   jmp .search
 .fail:
+  pop rsi
+  pop rdi
   push qword 0
   jmp next
 .done:
-  push qword rsi
+  mov rax, rsi
+  pop rsi
+  pop rdi
+  push rax
   jmp next
 
 native ".S", dotS
@@ -138,13 +167,6 @@ native ".S", dotS
 .done:
   jmp next
 
-; ( n -- "n")
-native ".", dot
-  pop rdi
-  call print_uint
-  mov rdi, SPC
-  call print_char
-  jmp next
 
 native "bl", bl
   push SPC
@@ -207,13 +229,25 @@ native "<", less
   push rax
   jmp next
 
-; ( " n " -- n)
+; I ( caddr -- num len) parse num from caddr
+; C ( " n " -- n) parse n from stdin
 native "number", number
+  cmp qword [state], INTERPRET
+  je .interpret
   mov rdi, input_buf
   mov rsi, input_buf_size
   call read_word
   call parse_int
   push rax
+  jmp next
+.interpret:
+  mov rdx, rdi
+  pop rdi
+  push rdx
+  call parse_int
+  pop rdi
+  push rax
+  push rdx
   jmp next
 
 ; ( c -- "c")
@@ -309,4 +343,36 @@ native "c@", read_char
   mov byte cl, [rdx]
   push rcx
   jmp next
+
+; compile only
+; ( b --) jmp if 0
+native "0branch", branch0
+  pop rax
+  test rax, rax
+  jnz .notzero
+  mov pc, [pc]
+  jmp next
+.notzero:
+  add pc, CELL_SIZE
+  jmp next
+
+; compile only
+native "branch", branch
+  mov pc, [pc]
+  jmp next
+
+; compile only
+; ( -- n) push value following this xt
+native "lit", lit
+  push qword [pc]
+  add pc, CELL_SIZE
+  jmp next
+
+native "execute", execute
+  pop rax
+  mov w, rax
+  jmp [rax]
+
+STATIC_DICT_END EQU DICT_TOP
+
 %endif

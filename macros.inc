@@ -1,16 +1,16 @@
-%ifndef _FYFTEM_FYFTEM_INC
-%define _FYFTEM_FYFTEM_INC
+%ifndef _FYFTEM_macros.inc
+%define _FYFTEM_macros.inc
 
 ; ===============
 ; = Definitions =
 ; ===============
 %define L 0
 %macro word 3
-%%L: dq L   ; pointer to previous word
+l%%L: dq L   ; pointer to previous word
 db %1, 0    ; string representation of word
 db %3       ; flags
 xt_%2:      ; execution token beginning
-%define L %%L
+%define L l%%L
 %endmacro
 
 %define DICT_TOP L
@@ -44,5 +44,11 @@ word %1, %2, 0
 ; = System constants =
 ; ====================
 %define input_buf_size 1024
+
+; ================
+; = Enumerations =
+; ================
+%define COMPILE   1
+%define INTERPRET 0
 
 %endif
