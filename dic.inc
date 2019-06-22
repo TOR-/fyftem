@@ -112,10 +112,33 @@ native "cfa", cfa
 
 ; ( n -- "n")
 native ".", dot
+  cmp rsp, [data_stack_base]
+  jae .empty
   pop rdi
   call print_uint
   mov rdi, SPC
   call print_char
+  jmp .done
+.empty:
+  mov rdi, msg_stack_empty
+  call print_string
+.done:
+  jmp next
+
+native ".S", dotS
+  mov rax, rsp
+.loop:
+  cmp rax, [data_stack_base]
+  jae .done
+  mov rdi, [rax]  ; print next stack value
+  push rax
+  call print_int
+  mov rdi, SPC
+  call print_char
+  pop rax
+  add rax, CELL_SIZE
+  jmp .loop
+.done:
   jmp next
 
 ; ( name* -- addr/0 )
@@ -149,22 +172,6 @@ native "find", find
   pop rsi
   pop rdi
   push rax
-  jmp next
-
-native ".S", dotS
-  mov rax, rsp
-.loop:
-  cmp rax, [data_stack_base]
-  jae .done
-  mov rdi, [rax]  ; print next stack value
-  push rax
-  call print_int
-  mov rdi, SPC
-  call print_char
-  pop rax
-  add rax, CELL_SIZE
-  jmp .loop
-.done:
   jmp next
 
 
@@ -372,6 +379,47 @@ native "execute", execute
   pop rax
   mov w, rax
   jmp [rax]
+
+; ============
+; INTERPRETER
+; ============
+colon "quit", quit
+  dq xt_lit, 1
+.eol:
+  dq xt_drop
+  ;dq xt_lit, LF, xt_emit
+  dq xt_lit, prompt, xt_count, xt_type
+  dq xt_branch, .loop
+.loop:
+  dq xt_bl, xt_word ; ( caddr len)
+  dq xt_dup, xt_branch0, .eol
+  dq xt_drop;, xt_dup  ; ( caddr caddr)
+  ;dq xt_read_char, xt_lit, LF, xt_equal, xt_not, xt_branch0, .eol
+  dq xt_interpret
+
+  dq xt_branch, .loop
+  dq xt_bye
+
+; ( caddr --)
+colon "interpret", interpret
+  dq xt_dup, xt_find ; ( caddr addr/0 )
+  dq xt_dup, xt_branch0, .number
+  dq xt_swap, xt_drop
+  dq xt_cfa, xt_execute
+  dq xt_exit
+.number:  ; ( caddr 0)
+  dq xt_drop, xt_dup, xt_number  ; ( caddr num len/0)
+  dq xt_branch0, .undefined
+  dq xt_swap, xt_drop
+  dq xt_exit
+.undefined: ; ( caddr 0)
+  dq xt_drop
+  dq xt_lit, '[', xt_emit, xt_lit, msg_undefined, xt_count, xt_type, xt_lit, SPC, xt_emit
+  dq xt_dup, xt_read_char, xt_dot,
+  dq xt_lit, '"', xt_emit, 
+  dq xt_count, xt_type
+  dq xt_lit, '"', xt_emit, xt_lit, ']', xt_emit
+  dq xt_exit
 
 STATIC_DICT_END EQU DICT_TOP
 

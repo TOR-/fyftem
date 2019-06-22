@@ -157,8 +157,7 @@ read_word_delim:
 
   cmp al, r13b
   je .skip
-  mov cl, LF
-  cmp cl, r13b
+  cmp al, LF
   je .skip
 .loop:
   cmp r14, r15
@@ -172,8 +171,7 @@ read_word_delim:
   pop rdi
   cmp al, r13b
   je .delim
-  mov cl, LF
-  cmp cl, r13b
+  cmp al, LF
   je .delim
   jmp .loop
 
