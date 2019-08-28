@@ -33,22 +33,4 @@ word %1, %2, 0
 
 %define CELL_SIZE 8
 
-; =============
-; = Registers =
-; =============
-%define pc      r15 ; pointer to next forth command
-%define w       r14 ; when non-native word starts execution, points to first word
-%define rstack  r13 ; Return stack pointer
-
-; ====================
-; = System constants =
-; ====================
-%define input_buf_size 1024
-
-; ================
-; = Enumerations =
-; ================
-%define COMPILE   1
-%define INTERPRET 0
-
 %endif

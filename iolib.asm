@@ -130,8 +130,68 @@ read_char:
 ; rdi - buffer address
 ; rsi - buffer length
 read_word:
-  mov rdx, SPC
-  call read_word_delim
+;  mov rdx, SPC
+;  call read_word_delim
+;  ret
+  push r15
+  push r14
+  push r13
+  mov r15, rsi
+  dec r15
+  xor r14, r14
+  mov r13, rdx
+.skip:  ; skip leading delimiters
+  push rdi
+  call read_char
+  pop rdi
+
+  cmp al, TAB
+  je .skip
+  cmp al, LF
+  je .skip
+  cmp al, CR
+  je .skip
+  cmp al, SPC
+  je .skip
+  test al, al
+  jz .delim
+.loop:
+  cmp r14, r15
+  je .toolong
+
+  mov byte [rdi + r14], al
+  inc r14
+
+  push rdi
+  call read_char
+  pop rdi
+  cmp al, TAB
+  je .delim
+  cmp al, LF
+  je .delim
+  cmp al, CR
+  je .delim
+  cmp al, SPC
+  je .delim
+  cmp al, 0
+  je .delim
+  cmp r14, 254
+  je .delim
+
+  jmp .loop
+
+.delim:
+  mov byte [rdi+r14], 0
+  mov rax, r14
+  pop r13
+  pop r14
+  pop r15
+  ret
+.toolong:
+  xor rax, rax
+  pop r13
+  pop r14
+  pop r15
   ret
 
 ; newlines are treated as delimiters in addition to whatever is specified

@@ -1,3 +1,5 @@
+%ifndef _FYFTEM_stdmac.inc
+%define _FYFTEM_stdmac.inc
 ;syscall       rax ; rdi---> rsi-----> rdx------> rcx------> r8-> r9---->|return(rax)
 ;===================================================================================
 SYS_READ  EQU 0    ; fd    . buf*    . count    .          .    .        |nread
@@ -28,8 +30,29 @@ STD_OUT     EQU 1
 STD_ERR     EQU 2
 ;characters
 NULL        EQU 0
-LF          EQU 0xA
 TAB         EQU 0x9
+LF          EQU 0xA
+CR          EQU 0xD
 SPC         EQU 0x20
 
 ASCII_OFFS  EQU '0'  ; 0x30
+
+; =============
+; = Registers =
+; =============
+%define pc      r15 ; pointer to next forth command
+%define w       r14 ; when non-native word starts execution, points to first word
+%define rstack  r13 ; Return stack pointer
+
+; ====================
+; = System constants =
+; ====================
+%define input_buf_size 1024
+
+; ================
+; = Enumerations =
+; ================
+%define COMPILE   1
+%define INTERPRET 0
+
+%endif

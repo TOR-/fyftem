@@ -10,6 +10,8 @@ data_stack_base: ; store data stack start address
   dq 0
 dict_top:
   dq 0
+here:
+  dq 0
 
 section .text
 ; ============
@@ -20,6 +22,10 @@ first_word:
 native "init", init
   mov rstack, rstack_start ; reset return stack
   mov pc, main_stub        ; load entry point
+  cmp qword [here], 0      ; here defined?
+  jne .dict
+  mov qword [here], STATIC_DICT_END + 1
+.dict:
   cmp qword [dict_top], 0  ; dict_top defined?
   jne .stack
   mov qword [dict_top], STATIC_DICT_END
@@ -50,12 +56,21 @@ native "exit", exit
 ; skip leading <char>s
 ; read ccc into buffer
 ; c-addr = buffer*
+;native "word", word
+;  pop rdx
+;  mov rdi, input_buf
+;  mov rsi, input_buf_size
+;  call read_word_delim
+;  push rdi
+;  push rax
+;  jmp next
+
+; ( addr -- len )
+; Reads word from stdin and stores it starting at address `addr'
+; Pushes word length `len'
 native "word", word
-  pop rdx
-  mov rdi, input_buf
-  mov rsi, input_buf_size
-  call read_word_delim
-  push rdi
+  pop rdi
+  call read_word
   push rax
   jmp next
 
@@ -126,6 +141,9 @@ native ".", dot
   jmp next
 
 native ".S", dotS
+  mov rdx, rdi
+  mov rdi, '<'
+  call print_char
   mov rax, rsp
 .loop:
   cmp rax, [data_stack_base]
@@ -139,6 +157,9 @@ native ".S", dotS
   add rax, CELL_SIZE
   jmp .loop
 .done:
+  mov rdi, '>'
+  call print_char
+  mov rdi, rdx
   jmp next
 
 ; ( name* -- addr/0 )
@@ -326,7 +347,7 @@ native "drop", drop
   jmp next
 
 ; ( address u --) stores u starting at address
-native "!", store_cell
+native "!", store
   pop rcx
   pop rdx
   mov [rdx], rcx
@@ -338,13 +359,13 @@ native "c!", store_char
   mov byte [rdx], cl
   jmp next
 ; ( address -- u) read cell from address
-native "@", read_cell
+native "@", fetch
   pop rdx
   mov rcx, [rdx]
   push rcx
   jmp next
 ; ( address -- c) read byte from address
-native "c@", read_char
+native "c@", fetch_char
   pop rdx
   xor rcx, rcx
   mov byte cl, [rdx]
@@ -384,42 +405,76 @@ native "execute", execute
 ; INTERPRETER
 ; ============
 colon "quit", quit
-  dq xt_lit, 1
+  ;dq xt_lit, 1  ; here only to be dropped in the first iteration
 .eol:
-  dq xt_drop
-  ;dq xt_lit, LF, xt_emit
-  dq xt_lit, prompt, xt_count, xt_type
-  dq xt_branch, .loop
+  ;dq xt_drop
+  dq xt_lit, prompt, xt_count, xt_type  ; type prompt
+  ;dq xt_branch, .loop ; jump to start of loop
 .loop:
-  dq xt_bl, xt_word ; ( caddr len)
-  dq xt_dup, xt_branch0, .eol
-  dq xt_drop;, xt_dup  ; ( caddr caddr)
-  ;dq xt_read_char, xt_lit, LF, xt_equal, xt_not, xt_branch0, .eol
+  dq xt_inbuf, xt_word ; ( len/0 ) parse a blank-delimited word
+  dq xt_branch0, .eol ; if the word is 0 long, end of line reached
+  ;dq xt_drop  ; ( caddr)  ;, xt_dup  ; ( caddr caddr);dq xt_read_char, xt_lit, LF, xt_equal, xt_not, xt_branch0, .eol
   dq xt_interpret
 
   dq xt_branch, .loop
   dq xt_bye
 
-; ( caddr --)
+; ( --)
 colon "interpret", interpret
-  dq xt_dup, xt_find ; ( caddr addr/0 )
+  dq xt_inbuf, xt_find ; ( addr/0 )
   dq xt_dup, xt_branch0, .number
-  dq xt_swap, xt_drop
-  dq xt_cfa, xt_execute
+  dq xt_cfa
+
+  ; compilation
+
+  ; interpret
+.interpreting: ; ( code-addr )
+  dq xt_execute
   dq xt_exit
-.number:  ; ( caddr 0)
-  dq xt_drop, xt_dup, xt_number  ; ( caddr num len/0)
-  dq xt_branch0, .undefined
-  dq xt_swap, xt_drop
-  dq xt_exit
-.undefined: ; ( caddr 0)
+.number:  ; ( 0 )
+  dq xt_drop, xt_inbuf, xt_number  ; ( len/0)
+  dq xt_dup, xt_branch0, .undefined
   dq xt_drop
-  dq xt_lit, '[', xt_emit, xt_lit, msg_undefined, xt_count, xt_type, xt_lit, SPC, xt_emit
-  dq xt_dup, xt_read_char, xt_dot,
+  dq xt_exit
+.undefined: ; ( 0 )
+  dq xt_drop
+  dq xt_lit, '[', xt_emit
+  dq xt_lit, msg_undefined, xt_count, xt_type
   dq xt_lit, '"', xt_emit, 
-  dq xt_count, xt_type
+  dq xt_inbuf, xt_count, xt_type
   dq xt_lit, '"', xt_emit, xt_lit, ']', xt_emit
   dq xt_exit
+
+; === ===========
+; END INTERPRETER
+; === ===========
+  
+; MEMORY MANAGEMENT
+; push address of next free location in data space
+; ( - addr)
+native "here", here
+  push qword [here]
+  jmp next
+
+; (de)allocate n bytes
+; ( n -)
+native "allot", allot
+  ;pop rax ;TODO
+  jmp next
+
+; if here not aligned, reserve enough space to align it
+; ( -)
+native "align", align
+  ;TODO
+  jmp next
+
+native "c,", c_comma
+  ;TODO
+  jmp next
+
+native ",", comma
+  ;TODO
+  jmp next
 
 STATIC_DICT_END EQU DICT_TOP
 

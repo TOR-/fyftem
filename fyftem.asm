@@ -21,12 +21,7 @@ state: dq INTERPRET
 section .text
 
 main_stub: 
-;.loop
   dq xt_quit
-;  dq xt_lit, LF, xt_emit
-;  dq branch0, .loop
-;  dq xt_bye
-
 
 next:
   mov w, [pc]
