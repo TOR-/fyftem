@@ -258,7 +258,7 @@ native "<", less
   jmp next
 
 ; I ( caddr -- num len) parse num from caddr
-; C ( " n " -- n) parse n from stdin
+; C ( caddr -- num len) parse n from caddr
 native "number", number
   cmp qword [state], INTERPRET
   je .interpret
@@ -432,12 +432,12 @@ colon "interpret", interpret
   dq xt_execute
   dq xt_exit
 .number:  ; ( 0 )
-  dq xt_drop, xt_inbuf, xt_number  ; ( len/0)
+  dq xt_drop, xt_inbuf, xt_number  ; ( num len/0)
   dq xt_dup, xt_branch0, .undefined
   dq xt_drop
   dq xt_exit
-.undefined: ; ( 0 )
-  dq xt_drop
+.undefined: ; ( 0 0 )
+  dq xt_drop, xt_drop
   dq xt_lit, '[', xt_emit
   dq xt_lit, msg_undefined, xt_count, xt_type
   dq xt_lit, '"', xt_emit, 
