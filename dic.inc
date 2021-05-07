@@ -401,15 +401,16 @@ native "execute", execute
   mov w, rax
   jmp [rax]
 
+native "state", state
+  push qword [state]
+  jmp next
+
 ; ============
 ; INTERPRETER
 ; ============
 colon "quit", quit
-  ;dq xt_lit, 1  ; here only to be dropped in the first iteration
 .eol:
-  ;dq xt_drop
   dq xt_lit, prompt, xt_count, xt_type  ; type prompt
-  ;dq xt_branch, .loop ; jump to start of loop
 .loop:
   dq xt_inbuf, xt_word ; ( len/0 ) parse a blank-delimited word
   dq xt_branch0, .eol ; if the word is 0 long, end of line reached
@@ -425,12 +426,17 @@ colon "interpret", interpret
   dq xt_dup, xt_branch0, .number
   dq xt_cfa
 
-  ; compilation
-
+  ; compile or interpret?
+  ; change this to respect definition of INTERPRET state macro
+  dq xt_state, xt_branch0, .interpreting
+  ; immediate?
+  dq xt_dup, xt_lit, 1, xt_sub, xt_fetch_char, xt_not, xt_branch0, .interpreting
+  ; compilation: compile xt and exit
+  ; ( code-addr )
+  dq xt_comma, xt_exit
   ; interpret
 .interpreting: ; ( code-addr )
-  dq xt_execute
-  dq xt_exit
+  dq xt_execute, xt_exit
 .number:  ; ( 0 )
   dq xt_drop, xt_inbuf, xt_number  ; ( num len/0)
   dq xt_dup, xt_branch0, .undefined
@@ -467,14 +473,80 @@ native "allot", allot
 native "align", align
   ;TODO
   jmp next
-
+; ( c -- )
+; compile c into next available byte
 native "c,", c_comma
-  ;TODO
+  mov rax, [here]
+  pop rcx
+  mov [rax], cl
+  add qword [here], 1
   jmp next
 
+; ( n -- )
+; compile n into next available cell
 native ",", comma
-  ;TODO
+  mov rax, [here]
+  pop qword [rax]
+  add qword [here], 8
   jmp next
+
+; ( x "<spaces>name" -- )
+; Skip leading spaces. Parse name delimited by a space. 
+; Create a definition for name with the execution semantics:
+; name ( -- x )
+native "constant", constant
+  mov rdi, input_buf
+  call read_word  ; rax <-- length
+  mov rcx, [here]
+  mov rdx, [dict_top]
+  mov qword [rcx], rdx  ; store previous word
+  add rcx, 8
+  mov [here], rcx
+  
+  mov rdi, input_buf
+  mov rsi, rcx
+  mov rdx, rax
+  push rax
+  call string_copy      ; store name
+  pop rax
+  mov rcx, [here]
+  add rcx, rax
+  mov byte [rcx], 0          ; terminating null byte
+  
+  add rcx, 1
+  mov byte [rcx], 0          ; no flags on a constant
+  add rcx, 1
+
+  mov qword [rcx], i_docol
+  add rcx, CELL_SIZE
+  mov qword [rcx], i_lit
+  add rcx, CELL_SIZE
+  pop rdx
+  mov qword [rcx], rdx
+  add rcx, CELL_SIZE
+  mov qword [rcx], i_exit
+  add rcx, CELL_SIZE
+   
+  mov qword [here], rcx       ; update here
+  jmp next
+  
+
+; =================
+; == COMPILATION ==
+; =================
+; ( name flags -- )
+; Creates entry `name' with `flags' in the dictionary
+;native "create", create
+;  mov rax, [dict_top]
+;  mov rsi, [here]
+;  mov [rsi], rax  ; pointer to previous word
+
+
+;colon ":", colon
+;.wait_name:
+;  dq xt_inbuf, xt_word
+;  dq xt_branch0, .wait_name 
+;  dq xt_lit
 
 STATIC_DICT_END EQU DICT_TOP
 
